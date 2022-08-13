@@ -1,0 +1,7 @@
+[{
+    "id": 1023,
+    "userName": "Rodrigo",
+    "password": "123",
+    "roleType":"Admin",
+    "pagesPermission":[{"path":"/register/registeremployee","roles":[0,1,2,3]}]
+}]
