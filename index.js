@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer')
 const app = express();
 var bodyParser = require("body-parser");
 const colaboradorData = require("./cadastro-colaborador/cadastro-colaborador.json");
+const rolePermissionData = require("./register-role-permission/register-role-permission.json");
 const resetPasswordData = require("./reset-password-token/reset-password-token.json");
 const usersData = require("./users/users.json");
 const cors = require("cors");
@@ -185,7 +186,6 @@ app.post("/user/resetPassword", (req, res) => {
       res.status(200).send({message: "Password changed successfully"}); 
     }
   });
-  
 })
 
 app.get("/registeremployee/", (req, res) => {
@@ -194,50 +194,192 @@ app.get("/registeremployee/", (req, res) => {
 
 app.get("/registeremployee/:id", (req, res) => {
   const { id } = req.params;
-
   const colaborador = colaboradorData.find(
     (colaborador) => colaborador.id == id
   );
   if (colaborador) {
-    console.log("Aceito");
+    delete colaborador.password;
     res.status(200).send(colaborador);
   } else {
-    console.log("Rejected");
     res.status(401).send({
-      message: `id ${id} não encontrado`,
+      message: `Employee ${id} not found`,
     });
   }
 });
 
-// app.post("/registeremployee/:id", (req, res) => {
-//   const { id } = req.params;
-//   const { descricao, cpfCnpj, tipoPessoa, telefone, status } = req.body;
-//   const cadastroColaborador = {
-//     codigo: colaboradorData.length + 1,
-//     descricao: descricao,
-//     cpfCnpj: cpfCnpj,
-//     tipoPessoa: tipoPessoa,
-//     telefone: telefone,
-//     grupoPrivilegio: 0,
-//     status: status,
-//   };
-//   const nenhumNull = Object.keys(cadastroColaborador).every((propertyName) => {
-//     if (cadastroColaborador[propertyName] == null) {
-//       res.status(418).send({
-//         message: `propriedade ${propertyName} não pode ser null`,
-//         value: cadastroColaborador[propertyName],
-//       });
-//       return false;
-//     }
-//     return true;
-//   });
-//   if (!nenhumNull) {
-//     return;
-//   }
-//   colaboradorData.push(cadastroColaborador);
-//   fs.writeFile(colaboradorDataPath, JSON.stringify(colaboradorData), (err) => {
-//     if (err) throw err;
-//     console.log("done writing");
-//   });
-//   res.send({ ...cadastroColaborador });
-// });
+app.post("/registeremployee/add", (req, res) => {
+  const { id,description,email,cpfCnpj,password,employeeType,phones,roleId,inactive } = req.body;
+  const colaborador = colaboradorData.find(
+    (colaborador) => colaborador.description.toLowerCase() == description.toLowerCase()
+  );
+  if (colaborador) {
+    res.status(401).send({message: 'Description already in use, change the name and try again'});
+    return
+  }
+  const roleFound = rolePermissionData.find(x => x.id = roleId)
+  if(!roleFound) {
+    res.status(401).send({message: 'Role not found'});
+    return
+  }
+  const users = usersData
+      const user = {
+        id: usersData.length + 1,
+        userName: description,
+        email: email,
+        password: password,
+        role: roleFound,
+        inactive: inactive
+      }
+      users.push(user)
+      fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  const employees = colaboradorData
+  employees.push(req.body)
+  fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
+    if (err) throw err;
+    console.log("done writing");
+  })
+  res.status(200).send();
+});
+
+app.put("/registeremployee/update", (req, res) => {
+  const { id,description,email,cpfCnpj,password,employeeType,phones,roleId,inactive } = req.body;
+  const colaborador = colaboradorData.find(
+    (colaborador) => colaborador.id == id
+  );
+  if (!colaborador) {
+    res.status(401).send({message: 'Employee not found'});
+    return
+  }
+  const hasColaboradorWithName = colaboradorData.find(
+    (colaborador) => colaborador.description.toLowerCase() == description.toLowerCase()
+  );
+  const nameIsTheSameId = hasColaboradorWithName? hasColaboradorWithName.id == colaborador.id : true
+  if (!nameIsTheSameId) {
+    res.status(401).send({message: 'Description already in use, change the name and try again'});
+    return
+  }
+  const roleFound = rolePermissionData.find(x => x.id = roleId)
+  if(!roleFound) {
+    res.status(401).send({message: 'Role not found'});
+    return
+  }
+  const users = usersData.filter(u => u.id != id)
+  const user = {
+    id: id,
+    userName: description,
+    email: email,
+    password: password,
+    role: roleFound,
+    inactive: inactive
+  }
+      users.push(user)
+      fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  const employees = colaboradorData.filter(c => c.id != id)
+  employees.push(req.body)
+  fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
+    if (err) throw err;
+    console.log("done writing");
+  })
+  res.status(200).send();
+});
+
+app.delete("/registeremployee/delete", (req, res) => {
+  const { id} = req.params;
+  const colaborador = colaboradorData.find(
+    (colaborador) => colaborador.id == id
+  );
+  if (!colaborador) {
+    res.status(401).send({message: 'Employee not found'});
+    return
+  }
+  const users = usersData.filter(u => u.id != id)
+      fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  const employees = colaboradorData.filter(u => u.id != id)
+  fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
+    if (err) throw err;
+    console.log("done writing");
+  })
+  res.status(200).send();
+});
+
+app.get("/rolePermission/", (req, res) => {
+  const rolePermission = rolePermissionData.map(role => ({id:role.id,description: role.description}))
+  res.status(200).send(rolePermission);
+});
+
+app.get("/rolePermission/:id", (req, res) => {
+  const { id } = req.params;
+  const rolePermission = rolePermissionData.find(
+    (role) => role.id == id
+  );
+  if (rolePermission) {
+    res.status(200).send(rolePermission);
+  } else {
+    res.status(401).send({
+      message: `Permission ${id} not found`,
+    });
+  }
+});
+
+app.post("/rolePermission/add", (req, res) => {
+  const { id,description} = req.body;
+  const rolePermission = rolePermissionData.find(
+    (role) => role.description.toLowerCase() == description.toLowerCase()
+  );
+  if (rolePermission) {
+    res.status(401).send({message: 'Description already in use'});
+    return
+  }
+  const roleData = rolePermissionData
+  roleData.push(req.body)
+      fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  res.status(200).send();
+});
+
+app.put("/rolePermission/update", (req, res) => {
+  const { id,description} = req.body;
+  const rolePermission = rolePermissionData.find(
+    (role) => role.description.toLowerCase() == description.toLowerCase()
+  );
+  if (rolePermission) {
+    res.status(401).send({message: 'Description already in use'});
+    return
+  }
+  const roleData = rolePermissionData.filter(r => r.id != id)
+  roleData.push(req.body)
+      fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  res.status(200).send();
+});
+
+app.delete("/rolePermission/delete", (req, res) => {
+  const { id} = req.params;
+  const rolePermission = rolePermissionData.find(
+    (role) => role.id == id
+  );
+  if (!rolePermission) {
+    res.status(401).send({message: 'Permission id not found'});
+    return
+  }
+  const roleData = rolePermissionData.filter(r => r.id != id)
+      fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
+  res.status(200).send();
+});
+

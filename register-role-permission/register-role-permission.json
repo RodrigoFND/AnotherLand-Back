@@ -1,0 +1,5 @@
+[{"id":1,
+"description":"Admin",
+"pagesPermission":[
+    {"path":"/register/registeremployee",
+"roles":[0,1,2,3]}]}]

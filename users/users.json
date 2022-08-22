@@ -1,1 +1,7 @@
-[{"id":1023,"userName":"Rodrigo","email":"rodrigofnaves@hotmail.com","password":"123","roleType":"Admin","pagesPermission":[{"path":"/register/registeremployee","roles":[0,1,2,3]}]}]
+[{"id":1,"userName":"Rodrigo","email":"rodrigofnaves@hotmail.com","password":"123","role":{"id":1,
+"description":"Admin",
+"pagesPermission":[
+    {"path":"/register/registeremployee",
+"roles":[0,1,3]}],
+"inactive": false}
+}]
