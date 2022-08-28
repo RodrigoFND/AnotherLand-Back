@@ -1,10 +1,1 @@
-[{"id":1,
-"description":"Rodrigo",
-"email":"rodrigofnaves@hotmail.com",
-"cpfCnpj": "037.723.721-39",
-"password":"123",
-"roleId": 1,
-"employeeType": 0,
-"phone": "(32) 3232-3232",
-"inactive" : false
-}]
+[{"id":1,"description":"Rodrigo","email":"rodrigofnaves@hotmail.com","cpfCnpj":"037.723.721-39","roleId":1,"employeeType":0,"phone":"(32) 3232-3232","inactive":false},{"confirmPassword":"123","pageERole":1,"password":"123","roleId":2,"inactive":false,"phone":"(99) 99999-9999","employeeType":0,"cpfCnpj":"11.111.111/1111-11","email":"teste@gmail.com","description":"teste","id":3}]

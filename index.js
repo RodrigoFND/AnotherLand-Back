@@ -189,7 +189,8 @@ app.post("/user/resetPassword", (req, res) => {
 })
 
 app.get("/registeremployee/", (req, res) => {
-  res.status(200).send(colaboradorData);
+  const colaboradores = colaboradorData.filter(colaborador => colaborador.id != 1)
+  res.status(200).send(colaboradores);
 });
 
 app.get("/registeremployee/:id", (req, res) => {
@@ -197,17 +198,23 @@ app.get("/registeremployee/:id", (req, res) => {
   const colaborador = colaboradorData.find(
     (colaborador) => colaborador.id == id
   );
+  if(id == 1) {
+    res.status(401).send({
+      message: `Employee not found`,
+    });
+    return
+  }
   if (colaborador) {
     delete colaborador.password;
     res.status(200).send(colaborador);
   } else {
     res.status(401).send({
-      message: `Employee ${id} not found`,
+      message: `Employee not found`,
     });
   }
 });
 
-app.post("/registeremployee/add", (req, res) => {
+app.post("/registeremployee", (req, res) => {
   const { id,description,email,cpfCnpj,password,employeeType,phones,roleId,inactive } = req.body;
   const colaborador = colaboradorData.find(
     (colaborador) => colaborador.description.toLowerCase() == description.toLowerCase()
@@ -216,14 +223,17 @@ app.post("/registeremployee/add", (req, res) => {
     res.status(401).send({message: 'Description already in use, change the name and try again'});
     return
   }
-  const roleFound = rolePermissionData.find(x => x.id = roleId)
+  const roleFound = rolePermissionData.find(x => x.id == roleId)
   if(!roleFound) {
     res.status(401).send({message: 'Role not found'});
     return
   }
+  console.log("role")
+  console.log(roleFound)
   const users = usersData
+  const employeeNewId= usersData.length + 1
       const user = {
-        id: usersData.length + 1,
+        id: employeeNewId,
         userName: description,
         email: email,
         password: password,
@@ -231,12 +241,13 @@ app.post("/registeremployee/add", (req, res) => {
         inactive: inactive
       }
       users.push(user)
+      console.log(user)
       fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
         if (err) throw err;
         console.log("done writing");
       });
   const employees = colaboradorData
-  employees.push(req.body)
+  employees.push({...req.body,id: employeeNewId })
   fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
     if (err) throw err;
     console.log("done writing");
@@ -244,7 +255,7 @@ app.post("/registeremployee/add", (req, res) => {
   res.status(200).send();
 });
 
-app.put("/registeremployee/update", (req, res) => {
+app.put("/registeremployee", (req, res) => {
   const { id,description,email,cpfCnpj,password,employeeType,phones,roleId,inactive } = req.body;
   const colaborador = colaboradorData.find(
     (colaborador) => colaborador.id == id
@@ -261,17 +272,18 @@ app.put("/registeremployee/update", (req, res) => {
     res.status(401).send({message: 'Description already in use, change the name and try again'});
     return
   }
-  const roleFound = rolePermissionData.find(x => x.id = roleId)
+  const roleFound = rolePermissionData.find(x => x.id == roleId)
   if(!roleFound) {
     res.status(401).send({message: 'Role not found'});
     return
   }
   const users = usersData.filter(u => u.id != id)
+  const userFound = usersData.find(u => u.id == id)
   const user = {
     id: id,
     userName: description,
     email: email,
-    password: password,
+    password: password || userFound.password,
     role: roleFound,
     inactive: inactive
   }
@@ -289,14 +301,20 @@ app.put("/registeremployee/update", (req, res) => {
   res.status(200).send();
 });
 
-app.delete("/registeremployee/delete", (req, res) => {
+app.delete("/registeremployee/:id", (req, res) => {
   const { id} = req.params;
   const colaborador = colaboradorData.find(
     (colaborador) => colaborador.id == id
   );
+  
   if (!colaborador) {
     res.status(401).send({message: 'Employee not found'});
     return
+  }
+  if(id == 1) {
+    res.status(401).send({message: 'This employee cannot be deleted'});
+    return
+
   }
   const users = usersData.filter(u => u.id != id)
       fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
@@ -330,7 +348,7 @@ app.get("/rolePermission/:id", (req, res) => {
   }
 });
 
-app.post("/rolePermission/add", (req, res) => {
+app.post("/rolePermission", (req, res) => {
   const { id,description} = req.body;
   const rolePermission = rolePermissionData.find(
     (role) => role.description.toLowerCase() == description.toLowerCase()
@@ -348,7 +366,7 @@ app.post("/rolePermission/add", (req, res) => {
   res.status(200).send();
 });
 
-app.put("/rolePermission/update", (req, res) => {
+app.put("/rolePermission", (req, res) => {
   const { id,description} = req.body;
   const rolePermission = rolePermissionData.find(
     (role) => role.description.toLowerCase() == description.toLowerCase()
@@ -366,11 +384,12 @@ app.put("/rolePermission/update", (req, res) => {
   res.status(200).send();
 });
 
-app.delete("/rolePermission/delete", (req, res) => {
+app.delete("/rolePermission", (req, res) => {
   const { id} = req.params;
   const rolePermission = rolePermissionData.find(
     (role) => role.id == id
   );
+
   if (!rolePermission) {
     res.status(401).send({message: 'Permission id not found'});
     return
@@ -382,4 +401,3 @@ app.delete("/rolePermission/delete", (req, res) => {
       });
   res.status(200).send();
 });
-
