@@ -357,13 +357,17 @@ app.post("/rolePermission", (req, res) => {
     res.status(401).send({message: 'Description already in use'});
     return
   }
-  const roleData = rolePermissionData
-  roleData.push(req.body)
+  const roleData = rolePermissionData.filter(r => r.id != id)
+  const newRole = {
+    id: rolePermissionData.length + 1,
+    description: description
+  }
+  roleData.push(newRole)
       fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
         if (err) throw err;
         console.log("done writing");
       });
-  res.status(200).send();
+  res.status(200).send(newRole);
 });
 
 app.put("/rolePermission", (req, res) => {
@@ -384,7 +388,7 @@ app.put("/rolePermission", (req, res) => {
   res.status(200).send();
 });
 
-app.delete("/rolePermission", (req, res) => {
+app.delete("/rolePermission/:id", (req, res) => {
   const { id} = req.params;
   const rolePermission = rolePermissionData.find(
     (role) => role.id == id
