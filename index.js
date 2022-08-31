@@ -7,9 +7,12 @@ const colaboradorData = require("./cadastro-colaborador/cadastro-colaborador.jso
 const rolePermissionData = require("./register-role-permission/register-role-permission.json");
 const resetPasswordData = require("./reset-password-token/reset-password-token.json");
 const usersData = require("./users/users.json");
+const pages = require("./pages/pages.json");
 const cors = require("cors");
 const port = 3001;
 const jwt = require("jsonwebtoken");
+const { promisify } = require('util');
+const { setTimeout } = require("timers");
 
 const transporter = nodemailer.createTransport({
   service: 'hotmail',
@@ -68,13 +71,22 @@ app.post("/user/loginWithToken", (req, res) => {
       });
     }
   });
-  const userData = jwt.decode(token);
-  delete userData.iat;
-  delete userData.exp;
-  const newToken = jwt.sign(userData, "jwtSecret", {
+  const userDecoded = jwt.decode(token);
+  const user = {...usersData.find(x => x.id == userDecoded.id)}
+  if(!user) {
+    {
+      res.status(401).send({
+        message: "User not found",
+        isAuthenticated: false,
+      });
+      return
+    }
+  }
+  delete user.password;
+  const newToken = jwt.sign(user, "jwtSecret", {
     expiresIn: 500, //1 min
   });
-  res.status(200).send({ token: newToken, user: userData });
+  res.status(200).send({ token: newToken, user: user });
 });
 
 app.post("/user/forgotPassword", (req, res) => {
@@ -190,7 +202,8 @@ app.post("/user/resetPassword", (req, res) => {
 
 app.get("/registeremployee/", (req, res) => {
   const colaboradores = colaboradorData.filter(colaborador => colaborador.id != 1)
-  res.status(200).send(colaboradores);
+  console.log(colaboradores)
+  res.status(200).send(colaboradorData);
 });
 
 app.get("/registeremployee/:id", (req, res) => {
@@ -279,26 +292,36 @@ app.put("/registeremployee", (req, res) => {
   }
   const users = usersData.filter(u => u.id != id)
   const userFound = usersData.find(u => u.id == id)
+  const userPassword = password || userFound?.password
   const user = {
     id: id,
     userName: description,
     email: email,
-    password: password || userFound.password,
+    password: userPassword,
     role: roleFound,
     inactive: inactive
   }
+
       users.push(user)
       fs.writeFile("./users/users.json", JSON.stringify(users), (err) => {
         if (err) throw err;
-        console.log("done writing");
       });
   const employees = colaboradorData.filter(c => c.id != id)
-  employees.push(req.body)
+  const employeeUpdated = {...req.body,password: userPassword}
+  employees.push(employeeUpdated)
+
   fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
     if (err) throw err;
     console.log("done writing");
+    
   })
+  console.log("updatedddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+  console.log(employeeUpdated)
+
   res.status(200).send();
+
+  
+  
 });
 
 app.delete("/registeremployee/:id", (req, res) => {
@@ -350,17 +373,22 @@ app.get("/rolePermission/:id", (req, res) => {
 
 app.post("/rolePermission", (req, res) => {
   const { id,description} = req.body;
-  const rolePermission = rolePermissionData.find(
+
+  const sameDescription = rolePermissionData.find(
     (role) => role.description.toLowerCase() == description.toLowerCase()
   );
-  if (rolePermission) {
+ 
+  if (sameDescription) {
     res.status(401).send({message: 'Description already in use'});
     return
   }
-  const roleData = rolePermissionData.filter(r => r.id != id)
+  const roleNewId = rolePermissionData.length + 1;
+  const rolePagesPermission = pages.map(p => ({...p,roles:[]}))
+  const roleData = rolePermissionData.filter(r => r.id != roleNewId)
   const newRole = {
-    id: rolePermissionData.length + 1,
-    description: description
+    id: roleNewId,
+    description: description,
+    pagesPermission: rolePagesPermission
   }
   roleData.push(newRole)
       fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
@@ -371,21 +399,55 @@ app.post("/rolePermission", (req, res) => {
 });
 
 app.put("/rolePermission", (req, res) => {
-  const { id,description} = req.body;
-  const rolePermission = rolePermissionData.find(
-    (role) => role.description.toLowerCase() == description.toLowerCase()
+  const { id,description,pagesPermission} = req.body;
+  const roleFound = rolePermissionData.find(
+    (role) => role.id == id
   );
-  if (rolePermission) {
+  if (!roleFound) {
+    res.status(401).send({message: 'Role permission not found'});
+    return
+  }
+  if (roleFound.id == 1) {
+    res.status(401).send({message: 'Cannot change admin permission'});
+    return
+  }
+  const descriptionExist = rolePermissionData.find(
+    (role) => role.description.toLowerCase() == description.toLowerCase() && role.id != id
+  );
+  if (descriptionExist) {
     res.status(401).send({message: 'Description already in use'});
     return
   }
   const roleData = rolePermissionData.filter(r => r.id != id)
-  roleData.push(req.body)
-      fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
+  const pagesWithRolePermission = pages.map(p => {
+    const role = pagesPermission.find(rp => rp.id == p.id)
+    return {
+      id: p.id,
+    path: p.path,
+    roles: role?.roles || []
+    }
+  })
+ 
+  roleFound.description = description
+  roleFound.pagesPermission = pagesWithRolePermission
+  console.log(JSON.stringify(roleFound))
+  roleData.push(roleFound)
+  fs.writeFile("./register-role-permission/register-role-permission.json", JSON.stringify(roleData), (err) => {
         if (err) throw err;
         console.log("done writing");
+        return
       });
-  res.status(200).send();
+  const usersWithChangedRole = usersData.map( u => {
+    if(u.role.id == roleFound.id) {
+      return {...u,role: roleFound}
+    }
+    return {...u}
+  })
+  fs.writeFile("./users/users.json", JSON.stringify(usersWithChangedRole), (err) => {
+    if (err) throw err;
+    console.log("done writing");
+  });
+  res.status(200).send(roleData);
 });
 
 app.delete("/rolePermission/:id", (req, res) => {
@@ -396,6 +458,11 @@ app.delete("/rolePermission/:id", (req, res) => {
 
   if (!rolePermission) {
     res.status(401).send({message: 'Permission id not found'});
+    return
+  }
+  const permissionVinculado = usersData.find(u => u.role.id == id)
+  if (permissionVinculado) {
+    res.status(401).send({message: 'Role attached to a user'});
     return
   }
   const roleData = rolePermissionData.filter(r => r.id != id)

@@ -1,4 +1,9 @@
 [{
     "id": 1,
     "path":"/register/registeremployee"
-}]
+},
+{
+    "id": 2,
+    "path":"/register/registerrolepermission"
+}
+]
