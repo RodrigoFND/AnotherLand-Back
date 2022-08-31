@@ -190,6 +190,14 @@ app.post("/user/resetPassword", (req, res) => {
         if (err) throw err;
         console.log("done writing");
       });
+      const colaboradorEncontrado = colaboradorData.find(data => data.id == tokenEncontrado.idUser)
+      const colaborador = colaboradorData.filter(data => data.id != tokenEncontrado.idUser)
+      colaborador.password = password
+      users.push(colaboradorEncontrado)
+      fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(users), (err) => {
+        if (err) throw err;
+        console.log("done writing");
+      });
       const resetPasswordTokens = resetPasswordData.filter(data => data.idToken != tokenEncontrado.idToken)
       fs.writeFile("./reset-password-token/reset-password-token.json", JSON.stringify(resetPasswordTokens), (err) => {
         if (err) throw err;
@@ -203,7 +211,7 @@ app.post("/user/resetPassword", (req, res) => {
 app.get("/registeremployee/", (req, res) => {
   const colaboradores = colaboradorData.filter(colaborador => colaborador.id != 1)
   console.log(colaboradores)
-  res.status(200).send(colaboradorData);
+  res.status(200).send(colaboradores);
 });
 
 app.get("/registeremployee/:id", (req, res) => {
@@ -229,11 +237,18 @@ app.get("/registeremployee/:id", (req, res) => {
 
 app.post("/registeremployee", (req, res) => {
   const { id,description,email,cpfCnpj,password,employeeType,phones,roleId,inactive } = req.body;
-  const colaborador = colaboradorData.find(
+  const existColaboradorMesmoNome = colaboradorData.find(
     (colaborador) => colaborador.description.toLowerCase() == description.toLowerCase()
   );
-  if (colaborador) {
-    res.status(401).send({message: 'Description already in use, change the name and try again'});
+  if (existColaboradorMesmoNome) {
+    res.status(401).send({message: 'Description already in use, change and try again'});
+    return
+  }
+  const existColaboradorMesmoEmail = colaboradorData.find(
+    (colaborador) => colaborador.email.toLowerCase() == email.toLowerCase()
+  );
+  if (existColaboradorMesmoEmail) {
+    res.status(401).send({message: 'Email already in use, change and try again'});
     return
   }
   const roleFound = rolePermissionData.find(x => x.id == roleId)
@@ -282,7 +297,15 @@ app.put("/registeremployee", (req, res) => {
   );
   const nameIsTheSameId = hasColaboradorWithName? hasColaboradorWithName.id == colaborador.id : true
   if (!nameIsTheSameId) {
-    res.status(401).send({message: 'Description already in use, change the name and try again'});
+    res.status(401).send({message: 'Description already in use, change and try again'});
+    return
+  }
+  const hasColaboradorWithEmail= colaboradorData.find(
+    (colaborador) => colaborador.email.toLowerCase() == email.toLowerCase()
+  );
+  const emailIsTheSameId = hasColaboradorWithEmail? hasColaboradorWithEmail.id == colaborador.id : true
+  if (!emailIsTheSameId) {
+    res.status(401).send({message: 'Email already in use, change and try again'});
     return
   }
   const roleFound = rolePermissionData.find(x => x.id == roleId)
@@ -307,16 +330,22 @@ app.put("/registeremployee", (req, res) => {
         if (err) throw err;
       });
   const employees = colaboradorData.filter(c => c.id != id)
-  const employeeUpdated = {...req.body,password: userPassword}
-  employees.push(employeeUpdated)
+  const employee = colaboradorData.find(c => c.id == id)
+ Object.keys(req.body).forEach(key => {
+  if(key == 'password') {
+    employee[key] = req.body[key] || employee?.password
+    return
+  }
+  employee[key] = req.body[key]
+ })
+ employees.push(employee)
 
   fs.writeFile("./cadastro-colaborador/cadastro-colaborador.json", JSON.stringify(employees), (err) => {
     if (err) throw err;
     console.log("done writing");
     
   })
-  console.log("updatedddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
-  console.log(employeeUpdated)
+
 
   res.status(200).send();
 
